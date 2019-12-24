@@ -40,7 +40,7 @@ from .urls_patterns import URL_ADMIN_SERVER_INFO, URL_ADMIN_CLIENT_AUTHZ_RESOURC
     URL_ADMIN_GROUP_MEMBERS, URL_ADMIN_USER_STORAGE, URL_ADMIN_GROUP_PERMISSIONS, URL_ADMIN_IDPS, \
     URL_ADMIN_USER_CLIENT_ROLES_AVAILABLE, URL_ADMIN_USERS, URL_ADMIN_CLIENT_SCOPES, \
     URL_ADMIN_CLIENT_SCOPES_ADD_MAPPER, URL_ADMIN_CLIENT_SCOPE, URL_ADMIN_CLIENT_SECRETS, \
-    URL_ADMIN_USER_REALM_ROLES
+    URL_ADMIN_USER_REALM_ROLES, URL_ADMIN_COMPONENTS, URL_ADMIN_COMPONENT
 
 
 class KeycloakAdmin:
@@ -1114,6 +1114,83 @@ class KeycloakAdmin:
         params_path = {"realm-name": self.realm_name, "id": client_id}
         data_raw = self.raw_get(URL_ADMIN_CLIENT_SECRETS.format(**params_path))
         return raise_error_from_response(data_raw, KeycloakGetError)
+
+    def get_components(self, name=None, parent=None, type=None):
+        """
+        Get a list of components.
+
+        ComponentRepresentation
+        https://www.keycloak.org/docs-api/8.0/rest-api/index.html#_componentrepresentation
+
+        :param name: The name of the component (Optional)
+        :param parent: The parent id of the components (Optional)
+        :param type: The type of the components (Optional)
+        :return: components list
+        """
+        params_path = {"realm-name": self.realm_name}
+        query = {k:v for (k,v) in {'name': name, 'parent': parent, 'type': type}.items() if v}
+        data_raw = self.raw_get(URL_ADMIN_COMPONENTS.format(**params_path), **query)
+        return raise_error_from_response(data_raw, KeycloakGetError)
+
+    def get_component(self, component_id):
+        """
+        Get a component specified by component_id.
+
+        ComponentRepresentation
+        https://www.keycloak.org/docs-api/8.0/rest-api/index.html#_componentrepresentation
+
+        :param component_id: The component id
+        :return: the component specified by component_id
+        """
+        params_path = {"realm-name": self.realm_name, "id": component_id}
+        data_raw = self.raw_get(URL_ADMIN_COMPONENT.format(**params_path))
+        return raise_error_from_response(data_raw, KeycloakGetError)
+
+    def create_component(self, payload, skip_exists=False):
+        """
+        Create a new component.
+
+        ComponentRepresentation
+        https://www.keycloak.org/docs-api/8.0/rest-api/index.html#_userrepresentation
+
+        :param payload: ComponentRepresentation
+        :return:  The ID of the created component
+        """
+        params_path = {"realm-name": self.realm_name}
+
+        data_raw = self.raw_post(URL_ADMIN_COMPONENTS.format(**params_path),
+                                 data=json.dumps(payload))
+        raise_error_from_response(data_raw, KeycloakGetError, expected_code=201, skip_exists=skip_exists)
+        _last_slash_idx = data_raw.headers['Location'].rindex('/')
+        return data_raw.headers['Location'][_last_slash_idx + 1:]
+
+    def update_component(self, component_id, payload):
+        """
+        Update a component specified by component_id with the specified payload.
+
+        :param component_id: Component id
+        :param payload: ComponentRepresentation
+
+        :return: Http response
+        """
+        params_path = {"realm-name": self.realm_name, "id": component_id}
+        data_raw = self.raw_put(URL_ADMIN_COMPONENT.format(**params_path),
+                                data=json.dumps(payload))
+        return raise_error_from_response(data_raw, KeycloakGetError, expected_code=204)
+
+    def delete_component(self, component_id):
+        """
+        Delete a component
+
+        ComponentRepresentation
+
+        :param component_id: Component id
+
+        :return: Http response
+        """
+        params_path = {"realm-name": self.realm_name, "id": component_id}
+        data_raw = self.raw_delete(URL_ADMIN_COMPONENT.format(**params_path))
+        return raise_error_from_response(data_raw, KeycloakGetError, expected_code=204)
 
 
     def raw_get(self, *args, **kwargs):
